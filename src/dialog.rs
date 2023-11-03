@@ -1,6 +1,11 @@
 use egui::*;
 
-use crate::{App, DialogAction};
+use crate::App;
+
+pub enum DialogAction {
+    Open,
+    Save,
+}
 
 impl App {
     pub fn open_file(&mut self) {

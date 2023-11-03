@@ -1,4 +1,5 @@
-use image::{io::Reader as ImageReader, DynamicImage, ImageBuffer};
+use egui::Color32;
+use image::{io::Reader as ImageReader, DynamicImage, ImageBuffer, Rgb};
 use micro_ndarray::Array;
 
 use crate::App;
@@ -11,8 +12,11 @@ impl App {
             .decode()
         {
             self.image = Array::from_flat(
-                x.to_rgb8().into_vec(),
-                [3, x.width() as usize, x.height() as usize],
+                x.to_rgb8()
+                    .pixels()
+                    .map(|&Rgb([r, g, b])| Color32::from_rgb(r, g, b))
+                    .collect::<Vec<_>>(),
+                [x.width() as usize, x.height() as usize],
             )
             .unwrap();
         } else {
@@ -24,14 +28,14 @@ impl App {
     /// SAFETY: Call only when self.filename is present
     pub fn save(&mut self) {
         let size = self.image.size();
-        DynamicImage::ImageRgb8(
-            ImageBuffer::from_vec(
-                size[1] as u32,
-                size[2] as u32,
-                self.image.clone().into_flattened(),
-            )
-            .unwrap(),
-        )
+        DynamicImage::ImageRgb8(ImageBuffer::from_fn(
+            size[0] as u32,
+            size[1] as u32,
+            |x, y| {
+                let px: Color32 = self.image[[x as usize, y as usize]];
+                Rgb(px.to_array()[0..3].try_into().unwrap())
+            },
+        ))
         .save(self.filename.as_ref().unwrap())
         .expect("This file can't be saved to due to an IO error");
     }

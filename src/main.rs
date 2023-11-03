@@ -2,15 +2,18 @@ use std::f32::consts::PI;
 use std::{process, sync::Arc, time::Duration};
 
 use color::DrawColor;
+use compress::ChangeRect;
 use eframe::CreationContext;
 use egui::load::SizedTexture;
 use egui::*;
 
+use dialog::DialogAction;
 use egui_file::FileDialog;
 use micro_ndarray::Array;
 use mode::Mode;
 
 mod color;
+mod compress;
 mod dialog;
 mod draw;
 mod io;
@@ -27,13 +30,8 @@ fn main() {
     .unwrap();
 }
 
-pub enum DialogAction {
-    Open,
-    Save,
-}
-
 pub struct App {
-    pub image: Array<u8, 3>,
+    pub image: Array<Color32, 2>,
     pub tex: TextureId,
     pub filename: Option<String>,
     pub dialog_action: Option<DialogAction>,
@@ -41,12 +39,13 @@ pub struct App {
     pub last_mouse_pos: Option<[usize; 2]>,
     pub mode: Mode,
     pub color: DrawColor,
+    pub changes: ChangeRect,
 }
 
 impl App {
     pub fn new(cc: &CreationContext) -> App {
         Self {
-            image: Array::new_with([3, 100, 100], 0xff),
+            image: Array::new_with([100, 100], Color32::WHITE),
             tex: cc.egui_ctx.tex_manager().write().alloc(
                 "canvas".to_owned(),
                 ImageData::Color(Arc::new(ColorImage::new(
@@ -64,13 +63,14 @@ impl App {
             last_mouse_pos: None,
             mode: Mode::Paintbrush,
             color: DrawColor::Black,
+            changes: ChangeRect::new(20),
         }
     }
 }
 
 impl eframe::App for App {
     fn update(&mut self, ctx: &Context, _frame: &mut eframe::Frame) {
-        ctx.request_repaint_after(Duration::from_millis(1000 / 120));
+        ctx.request_repaint_after(Duration::from_millis(1000 / 60));
         self.handle_dialogs(ctx);
         let f = Frame::none()
             .inner_margin(Margin::same(2.0))
@@ -83,7 +83,8 @@ impl eframe::App for App {
                             self.load();
                         }
                         if ui.button("Clear").clicked() {
-                            self.image = Array::new_with([3, 0, 0], 0xff); // expanded automatically
+                            // expanded automatically
+                            self.image = Array::new_with([0, 0], Color32::WHITE);
                         }
                         if ui.button("Open...").clicked() {
                             self.open_file();

@@ -1,25 +1,26 @@
 use std::f32::consts::PI;
 
+use egui::Color32;
+
 use crate::App;
 
 impl App {
     pub fn set_px(&mut self, x: usize, y: usize, px: u32) {
         let size = self.image.size();
-        if size[1] <= x || size[2] <= y {
+        if size[0] <= x || size[1] <= y {
             return; // just ignore
         }
-        self.image[[0, x, y]] = ((px >> 16) & 0xff) as u8;
-        self.image[[1, x, y]] = ((px >> 8) & 0xff) as u8;
-        self.image[[2, x, y]] = ((px) & 0xff) as u8;
+        self.image[[x, y]] = Color32::from_rgb((px >> 16) as u8, (px >> 8) as u8, px as u8);
+        self.changes.push(x, y);
     }
 
     pub fn draw_dot(&mut self, x: usize, y: usize) {
         let color = self.color.into_color();
         self.set_px(x, y + 1, color);
-        self.set_px(x - 1, y, color);
+        self.set_px(x.wrapping_sub(1), y, color);
         self.set_px(x, y, color);
         self.set_px(x + 1, y, color);
-        self.set_px(x, y - 1, color);
+        self.set_px(x, y.wrapping_sub(1), color);
     }
 
     pub fn draw_line(
