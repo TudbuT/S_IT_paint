@@ -1,4 +1,4 @@
-use egui::Color32;
+use egui::{Color32, Pos2, Rect};
 use image::{io::Reader as ImageReader, DynamicImage, ImageBuffer, Rgb};
 use micro_ndarray::Array;
 
@@ -19,6 +19,10 @@ impl App {
                 [x.width() as usize, x.height() as usize],
             )
             .unwrap();
+            self.changes.all(Rect::from_min_max(
+                Pos2::ZERO,
+                Pos2::new(x.width() as f32, x.height() as f32),
+            ));
         } else {
             self.filename = None;
             println!("Unable to load this image.");
