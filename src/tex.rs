@@ -63,10 +63,10 @@ impl App {
             }
             return;
         }
-        if (changes.rect.area() as usize) < self.image.as_flattened().len() / 2 {
+        if changes.area < self.image.as_flattened().len() / 2 {
             let cimg = ColorImage {
                 size: changes.size,
-                pixels: self.image.area_flat(changes.rect),
+                pixels: self.image.area_flat(changes.min, changes.size),
             };
             texman.set(
                 self.tex,

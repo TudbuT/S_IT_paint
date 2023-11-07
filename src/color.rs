@@ -20,16 +20,20 @@ use DrawColor::*;
 
 impl DrawColor {
     pub fn menu(app: &mut App, ui: &mut Ui) {
-        ui.radio_value(&mut app.color, Black, "Black");
-        ui.radio_value(&mut app.color, White, "White");
-        ui.radio_value(&mut app.color, Red, "Red");
-        ui.radio_value(&mut app.color, Green, "Green");
-        ui.radio_value(&mut app.color, Blue, "Blue");
-        ui.radio_value(&mut app.color, Yellow, "Yellow");
-        ui.radio_value(&mut app.color, Orange, "Orange");
-        ui.radio_value(&mut app.color, Brown, "Brown");
-        ui.radio_value(&mut app.color, Aqua, "Aqua");
-        ui.radio_value(&mut app.color, Purple, "Purple");
+        let mut clicked = false;
+        clicked |= ui.radio_value(&mut app.color, Black, "Black").clicked();
+        clicked |= ui.radio_value(&mut app.color, White, "White").clicked();
+        clicked |= ui.radio_value(&mut app.color, Red, "Red").clicked();
+        clicked |= ui.radio_value(&mut app.color, Green, "Green").clicked();
+        clicked |= ui.radio_value(&mut app.color, Blue, "Blue").clicked();
+        clicked |= ui.radio_value(&mut app.color, Yellow, "Yellow").clicked();
+        clicked |= ui.radio_value(&mut app.color, Orange, "Orange").clicked();
+        clicked |= ui.radio_value(&mut app.color, Brown, "Brown").clicked();
+        clicked |= ui.radio_value(&mut app.color, Aqua, "Aqua").clicked();
+        clicked |= ui.radio_value(&mut app.color, Purple, "Purple").clicked();
+        if clicked {
+            app.draw.px = app.color.into_color();
+        }
     }
 
     pub fn into_color(self) -> u32 {

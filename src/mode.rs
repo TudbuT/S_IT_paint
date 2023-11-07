@@ -2,7 +2,7 @@ use std::f32::consts::PI;
 
 use egui::*;
 
-use crate::App;
+use crate::{draw::DrawParams, App};
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub enum Mode {
@@ -22,12 +22,12 @@ impl Mode {
         ui.radio_value(&mut app.mode, Circle, "Circle");
     }
 
-    pub fn into_fn(self) -> fn(&mut App, usize, usize) {
+    pub fn into_fn(self) -> fn(&mut App, DrawParams) {
         match self {
             Paintbrush => App::draw_dot,
-            Triangle => |this, x, y| this.draw_ngon(x, y, 3, 30.0, 0.0),
-            Square => |this, x, y| this.draw_ngon(x, y, 4, 30.0, 45.0),
-            Circle => |this, x, y| this.draw_ngon(x, y, (30.0 * PI) as usize, 30.0, 0.0),
+            Triangle => |this, draw| this.draw_ngon(draw, 3, 30.0, 0.0),
+            Square => |this, draw| this.draw_ngon(draw, 4, 30.0, 45.0),
+            Circle => |this, draw| this.draw_ngon(draw, (30.0 * PI) as usize, 30.0, 0.0),
         }
     }
 }

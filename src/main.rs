@@ -3,6 +3,7 @@ use std::{process, sync::Arc, time::Duration};
 
 use color::DrawColor;
 use compress::ChangeRect;
+use draw::DrawParams;
 use eframe::CreationContext;
 use egui::load::SizedTexture;
 use egui::*;
@@ -36,10 +37,12 @@ pub struct App {
     pub filename: Option<String>,
     pub dialog_action: Option<DialogAction>,
     pub dialog: Option<FileDialog>,
-    pub last_mouse_pos: Option<[usize; 2]>,
+    pub last_mouse_pos: Option<DrawParams>,
     pub mode: Mode,
     pub color: DrawColor,
+    pub draw: DrawParams,
     pub changes: ChangeRect,
+    pub cur_edit: Option<String>,
 }
 
 impl App {
@@ -63,7 +66,9 @@ impl App {
             last_mouse_pos: None,
             mode: Mode::Paintbrush,
             color: DrawColor::Black,
+            draw: DrawParams::new(0, 0, 1, 0x000000),
             changes: ChangeRect::new(20),
+            cur_edit: None,
         }
     }
 }
@@ -105,11 +110,21 @@ impl eframe::App for App {
                     ui.menu_button("Colors", |ui| {
                         DrawColor::menu(self, ui);
                     });
+                    ui.menu_button("Size", |ui| {
+                        if self.cur_edit.is_none() {
+                            self.cur_edit = Some(self.draw.size.to_string());
+                        }
+                        let cur_edit = self.cur_edit.as_mut().unwrap();
+                        if ui.text_edit_singleline(cur_edit).lost_focus() {
+                            self.draw.size = cur_edit.parse().unwrap_or(self.draw.size);
+                            self.cur_edit = None;
+                        }
+                    });
                 })
             })
         });
         CentralPanel::default().frame(f).show(ctx, |ui| {
-            let size = ui.available_size();
+            let size = ui.available_size().round();
             self.correct_tex_size(
                 &mut ctx.tex_manager().write(),
                 [size.x as usize, size.y as usize],
@@ -124,12 +139,16 @@ impl eframe::App for App {
                     return;
                 };
                 if inp.key_down(Key::D) {
-                    self.draw_ngon(pointer_pos.x as usize, pointer_pos.y as usize, 3, 30.0, 0.0);
+                    self.draw_ngon(
+                        self.draw.at(pointer_pos.x as usize, pointer_pos.y as usize),
+                        3,
+                        30.0,
+                        0.0,
+                    );
                 }
                 if inp.key_down(Key::Q) {
                     self.draw_ngon(
-                        pointer_pos.x as usize,
-                        pointer_pos.y as usize,
+                        self.draw.at(pointer_pos.x as usize, pointer_pos.y as usize),
                         4,
                         30.0,
                         45.0,
@@ -137,8 +156,7 @@ impl eframe::App for App {
                 }
                 if inp.key_down(Key::K) {
                     self.draw_ngon(
-                        pointer_pos.x as usize,
-                        pointer_pos.y as usize,
+                        self.draw.at(pointer_pos.x as usize, pointer_pos.y as usize),
                         (30.0 * PI) as usize,
                         30.0,
                         0.0,
@@ -146,8 +164,7 @@ impl eframe::App for App {
                 }
                 if inp.pointer.primary_down() {
                     self.draw_mouse(
-                        pointer_pos.x as usize,
-                        pointer_pos.y as usize,
+                        self.draw.at(pointer_pos.x as usize, pointer_pos.y as usize),
                         self.mode.into_fn(),
                     );
                 } else {

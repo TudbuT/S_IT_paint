@@ -6,10 +6,10 @@ use micro_ndarray::Array;
 pub struct ChangedRect {
     pub changelist: Option<Vec<[usize; 2]>>,
     pub count: usize,
-    pub rect: Rect,
     pub min: [usize; 2],
     pub max: [usize; 2],
     pub size: [usize; 2],
+    pub area: usize,
 }
 
 pub struct ChangeRect {
@@ -74,29 +74,30 @@ impl ChangeRect {
         let changelist = self.changelist.take();
         self.count = 0;
         self.changelist = Some(Vec::with_capacity(self.max_changelist_len));
+
+        let size = [self.max[0] - self.min[0] + 1, self.max[1] - self.min[1] + 1];
         ChangedRect {
             changelist,
             count,
-            rect: Rect {
-                min: self.min.map(|x| x as f32).into(),
-                max: self.max.map(|x| x as f32).into(),
-            },
             min: self.min,
             max: self.max,
-            size: [self.max[0] - self.min[0], self.max[1] - self.min[1]],
+            size,
+            area: size[0] * size[1],
         }
     }
 }
 
 pub trait FlatArea<T> {
-    fn area_flat(&self, area: Rect) -> Vec<T>;
+    fn area_flat(&self, start: [usize; 2], size: [usize; 2]) -> Vec<T>;
 }
 
 impl<T: Copy + Sized> FlatArea<T> for Array<T, 2> {
-    fn area_flat(&self, area: Rect) -> Vec<T> {
-        let size = area.size();
-        let size = [size.x as usize, size.y as usize];
-        let mut r = Vec::with_capacity(area.area() as usize);
+    fn area_flat(&self, start: [usize; 2], size: [usize; 2]) -> Vec<T> {
+        let array_size = self.size();
+        if start[0] + size[0] > array_size[0] || start[1] + size[1] > array_size[1] {
+            panic!("Out of bounds area_flat: Size {size:?} at {start:?} requested, but only {array_size:?} available.")
+        }
+        let mut r = Vec::with_capacity(size[0] * size[1]);
         let y_len = self.size()[0];
         let self_flat = self.as_flattened();
         // SAFETY: [all unsafe operations explained in further comments]
@@ -105,7 +106,7 @@ impl<T: Copy + Sized> FlatArea<T> for Array<T, 2> {
             // SAFETY: Every element will be overwritten
             r.set_len(size[0] * size[1]);
             for i in 0..size[1] {
-                let idx = area.min.x as usize + (area.min.y as usize + i) * y_len;
+                let idx = start[0] + (start[1] + i) * y_len;
                 // SAFETY: All items are [`Copy`], both pointers have the same
                 // types and cannot overlap as r is freshly created. The length
                 // of r is ensured above at r.set_len, based on the length of
