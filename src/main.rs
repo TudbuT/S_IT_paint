@@ -8,6 +8,7 @@ use eframe::CreationContext;
 use egui::load::SizedTexture;
 use egui::*;
 
+use debug::Debug;
 use dialog::DialogAction;
 use egui_file::FileDialog;
 use micro_ndarray::Array;
@@ -15,6 +16,7 @@ use mode::Mode;
 
 mod color;
 mod compress;
+mod debug;
 mod dialog;
 mod draw;
 mod io;
@@ -43,6 +45,7 @@ pub struct App {
     pub draw: DrawParams,
     pub changes: ChangeRect,
     pub cur_edit: Option<String>,
+    pub debug: Debug,
 }
 
 impl App {
@@ -69,6 +72,7 @@ impl App {
             draw: DrawParams::new(0, 0, 1, 0x000000),
             changes: ChangeRect::new(20),
             cur_edit: None,
+            debug: Debug::default(),
         }
     }
 }
@@ -120,9 +124,13 @@ impl eframe::App for App {
                             self.cur_edit = None;
                         }
                     });
+                    ui.menu_button("Debugging", |ui| {
+                        ui.checkbox(&mut self.debug.randomize_size, "Randomize sizes");
+                    });
                 })
             })
         });
+        self.update_debug();
         CentralPanel::default().frame(f).show(ctx, |ui| {
             let size = ui.available_size().round();
             self.correct_tex_size(
@@ -130,7 +138,7 @@ impl eframe::App for App {
                 [size.x as usize, size.y as usize],
             );
             self.image_to_texture(&mut ctx.tex_manager().write());
-            let r = ui.add(egui::Image::from_texture(SizedTexture::new(self.tex, size)));
+            let r = ui.add(Image::from_texture(SizedTexture::new(self.tex, size)));
             ui.input(|inp| {
                 if !r.hovered() {
                     return;

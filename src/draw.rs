@@ -47,7 +47,7 @@ impl App {
     pub fn set_px(&mut self, draw: DrawParams) {
         let DrawParams { x, y, px, .. } = draw;
         let size = self.image.size();
-        if size[0] <= x || size[1] <= y {
+        if x >= size[0] || y >= size[1] {
             return; // just ignore
         }
         self.image[[x, y]] = Color32::from_rgb((px >> 16) as u8, (px >> 8) as u8, px as u8);
@@ -106,7 +106,7 @@ impl App {
         for _ in 0..(dist + 1.0) as usize {
             func(
                 self,
-                draw1.at_sized(fx as usize, fy as usize, fsize as usize),
+                draw1.at_sized(fx as usize, fy as usize, fsize.round() as usize),
             );
             if fx as usize == x2 && fy as usize == y2 {
                 break;
