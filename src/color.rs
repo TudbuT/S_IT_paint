@@ -35,8 +35,15 @@ impl DrawColor {
             app.draw.px = app.color.into_color();
         }
     }
+}
 
-    pub fn into_color(self) -> u32 {
+pub trait ColorConvert {
+    fn into_color(self) -> u32;
+    fn into_colorf(self) -> [f32; 3];
+}
+
+impl ColorConvert for DrawColor {
+    fn into_color(self) -> u32 {
         match self {
             Black => 0,
             White => 0xffffff,
@@ -49,5 +56,36 @@ impl DrawColor {
             Aqua => 0x00ffff,
             Purple => 0xff00ff,
         }
+    }
+
+    fn into_colorf(self) -> [f32; 3] {
+        self.into_color().into_colorf()
+    }
+}
+
+impl ColorConvert for u32 {
+    fn into_color(self) -> u32 {
+        self
+    }
+
+    fn into_colorf(self) -> [f32; 3] {
+        [
+            (self >> 16 & 0xff) as f32 / 255.0,
+            (self >> 8 & 0xff) as f32 / 255.0,
+            (self & 0xff) as f32 / 255.0,
+        ]
+    }
+}
+
+impl ColorConvert for [f32; 3] {
+    fn into_color(self) -> u32 {
+        let r = (self[0] * 255.0) as u32;
+        let g = (self[1] * 255.0) as u32;
+        let b = (self[2] * 255.0) as u32;
+        (r << 16) + (g << 8) + b
+    }
+
+    fn into_colorf(self) -> [f32; 3] {
+        self
     }
 }
