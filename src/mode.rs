@@ -22,7 +22,9 @@ impl Mode {
         ui.radio_value(&mut app.mode, Fill, "Fill");
     }
 
+    /// Some things shouldn't be interpolated and only run once
     pub fn run_once(self) -> bool {
+        #[allow(clippy::match_like_matches_macro)] // this may have more added later
         match self {
             Fill => true,
             _ => false,
@@ -32,7 +34,7 @@ impl Mode {
     /// universalizes the mode into a single function with pre-set size
     pub fn into_fn_sized(self, radius_x: f32, radius_y: f32) -> fn(&mut App, DrawParams) {
         static mut RADIUS: (f32, f32) = (0.0, 0.0);
-        // this is single-threaded
+        // this is single-threaded so a static is fine
         unsafe {
             RADIUS = (radius_x, radius_y); // need this for compatible match arms
             match self {

@@ -6,6 +6,7 @@ use crate::App;
 
 impl App {
     /// SAFETY: Call only when self.filename is present
+    /// loads a file from disk (called after open dialog is confirmed)
     pub fn load(&mut self) {
         if let Ok(x) = ImageReader::open(self.filename.as_ref().unwrap())
             .expect("This file can't be opened due to an IO error")
@@ -30,6 +31,7 @@ impl App {
     }
 
     /// SAFETY: Call only when self.filename is present
+    /// saves the image to disk
     pub fn save(&mut self) {
         let size = self.image.size();
         DynamicImage::ImageRgb8(ImageBuffer::from_fn(

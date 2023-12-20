@@ -7,6 +7,7 @@ impl App {
         self.real_image = self.image.clone();
     }
 
+    // not perfectly efficient, but fast enough to be responsive
     pub fn pull(&mut self, inp: &InputState, pointer_pos: [usize; 2]) {
         if let Some(pull_start) = self.pull_start {
             // clone the image to reset it, then draw the current state of the pulled brush
@@ -19,10 +20,10 @@ impl App {
             ));
 
             // the distance pulled divided by two (-> the radius)
-            let pull_x = (pull_start[0] as isize - pointer_pos[0] as isize) / 2;
-            let pull_y = (pull_start[1] as isize - pointer_pos[1] as isize) / 2;
+            let pull_x = (pointer_pos[0] as isize - pull_start[0] as isize) / 2;
+            let pull_y = (pointer_pos[1] as isize - pull_start[1] as isize) / 2;
             let pull_size = if inp.modifiers.shift {
-                // if shift is pressed, both sizes are the same
+                // if shift is pressed, both sizes are the same (specifically, the biggest of the two)
                 #[inline]
                 fn sign(x: isize) -> isize {
                     if x < 0 {
@@ -37,23 +38,25 @@ impl App {
             } else {
                 [pull_x, pull_y]
             };
+
+            // draw:
             self.mode
                 .into_fn_sized(pull_size[0] as f32, pull_size[1] as f32)(
                 self,
                 self.draw.at(
                     // this is going to be the center
-                    (pull_start[0] as isize - pull_size[0]) as usize,
-                    (pull_start[1] as isize - pull_size[1]) as usize,
+                    (pull_start[0] as isize + pull_size[0]) as usize,
+                    (pull_start[1] as isize + pull_size[1]) as usize,
                 ),
             );
 
-            // resets the pull
+            // reset and save the pull if user has stopped pulling
             if !inp.pointer.secondary_down() {
                 self.pull_start = None;
                 self.sync();
             }
         } else {
-            // starts a pull
+            // start a pull
             self.pull_start = Some(pointer_pos);
             self.sync();
         }

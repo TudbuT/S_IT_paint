@@ -16,6 +16,7 @@ impl Default for Debug {
     }
 }
 
+// bad (but good-enough for this purpose) random number generator
 fn rand(rand: &mut u64) -> u8 {
     let state = *rand;
     let r = ((state & 0b1111) << 60) + ((state >> 60) & 0b1111);

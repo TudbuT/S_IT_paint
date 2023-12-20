@@ -84,8 +84,12 @@ impl App {
 
 impl eframe::App for App {
     fn update(&mut self, ctx: &Context, _frame: &mut eframe::Frame) {
-        ctx.request_repaint_after(Duration::from_millis(0));
+        // try to do 90fps
+        ctx.request_repaint_after(Duration::from_millis(1000 / 90));
+
         self.handle_dialogs(ctx);
+
+        // the content frame
         let f = Frame::none()
             .inner_margin(Margin::same(2.0))
             .fill(Color32::from_rgb(0x00, 0x00, 0x00));
@@ -153,20 +157,27 @@ impl eframe::App for App {
                 [size.x as usize, size.y as usize],
             );
             self.image_to_texture(&mut ctx.tex_manager().write());
+
+            // draw the texture
             let r = ui.add(Image::from_texture(SizedTexture::new(self.tex, size)));
 
-            // handle mouse and keyboard input
+            // handle keyboard and mouse input
             ui.input(|inp| {
+                // get pointer pos offset to be in the image or return if its not inside the window
+                let Some(pointer_pos) = r.hover_pos().map(|pos| pos - r.rect.min) else {
+                    return;
+                };
+                // return if not actually on the image
                 if !r.hovered() {
                     return; // we don't need to handle it if it's not in focus
                 }
-                let Some(pointer_pos) = r.hover_pos().map(|x| x - r.rect.min) else {
-                    return; // we don't need to handle it if the image is not under the cursor
-                };
+
+                // handle pulling shapes
                 if inp.pointer.secondary_down() || self.pull_start.is_some() {
-                    self.pull(&inp, [pointer_pos.x as usize, pointer_pos.y as usize]);
+                    self.pull(inp, [pointer_pos.x as usize, pointer_pos.y as usize]);
                     return;
                 }
+
                 if inp.key_down(Key::D) {
                     self.draw_ngon(
                         self.draw.at(pointer_pos.x as usize, pointer_pos.y as usize),
@@ -198,8 +209,10 @@ impl eframe::App for App {
                 if inp.pointer.primary_down() {
                     let draw = self.draw.at(pointer_pos.x as usize, pointer_pos.y as usize);
                     if self.mode.run_once() {
+                        // don't interpolate
                         self.mode.into_fn()(self, draw);
                     } else {
+                        // interpolate
                         self.draw_mouse(draw, self.mode.into_fn());
                     }
                 } else {

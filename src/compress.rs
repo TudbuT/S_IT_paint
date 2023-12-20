@@ -36,7 +36,7 @@ impl ChangeRect {
     pub fn push(&mut self, x: usize, y: usize) {
         self.count += 1;
         if self.changelist.is_some() && self.count >= self.max_changelist_len {
-            self.changelist = None;
+            self.changelist = None; // changelist has "overflown" (too much to update single points)
         }
         if let Some(ref mut changelist) = self.changelist {
             changelist.push([x, y]);
@@ -47,6 +47,8 @@ impl ChangeRect {
             self.empty = false;
             return;
         }
+
+        // expand area to include this point
         if x < self.min[0] {
             self.min[0] = x;
         }
@@ -62,12 +64,14 @@ impl ChangeRect {
     }
 
     pub fn all(&mut self, rect: Rect) {
+        // only pushes the corners as an optimization
         self.push(rect.min.x as usize, rect.min.y as usize);
         self.push(rect.max.x as usize, rect.max.y as usize);
-        self.changelist = None;
-        self.count += rect.area() as usize - 2;
+        self.changelist = None; // force "overflown" changelist
+        self.count += rect.area() as usize - 2; // add other pixels in rectangle that werent added by push
     }
 
+    /// "takes" the changes, resetting this struct and returning the area/pixels to update
     pub fn take(&mut self) -> ChangedRect {
         self.empty = true;
         let count = self.count;
@@ -103,7 +107,7 @@ impl<T: Copy + Sized> FlatArea<T> for Array<T, 2> {
         // SAFETY: [all unsafe operations explained in further comments]
         unsafe {
             let mut r_ptr = r.as_mut_ptr();
-            // SAFETY: Every element will be overwritten
+            // SAFETY: Every element will be overwritten => no garbage data will be left
             r.set_len(size[0] * size[1]);
             for i in 0..size[1] {
                 let idx = start[0] + (start[1] + i) * y_len;
@@ -114,7 +118,7 @@ impl<T: Copy + Sized> FlatArea<T> for Array<T, 2> {
                 self_flat[idx..]
                     .as_ptr()
                     .copy_to_nonoverlapping(r_ptr, size[0]);
-                r_ptr = r_ptr.offset(size[0] as isize);
+                r_ptr = r_ptr.add(size[0]);
             }
         }
         r

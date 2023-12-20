@@ -21,6 +21,8 @@ use DrawColor::*;
 impl DrawColor {
     pub fn menu(app: &mut App, ui: &mut Ui) {
         let mut clicked = false;
+        // rust does not have reflection at the moment so this looks a bit ugly and repetitive
+        // adds button to the menu
         clicked |= ui.radio_value(&mut app.color, Black, "Black").clicked();
         clicked |= ui.radio_value(&mut app.color, White, "White").clicked();
         clicked |= ui.radio_value(&mut app.color, Red, "Red").clicked();
@@ -31,6 +33,7 @@ impl DrawColor {
         clicked |= ui.radio_value(&mut app.color, Brown, "Brown").clicked();
         clicked |= ui.radio_value(&mut app.color, Aqua, "Aqua").clicked();
         clicked |= ui.radio_value(&mut app.color, Purple, "Purple").clicked();
+        // if any have been clicked, change the color to it
         if clicked {
             app.draw.px = app.color.into_color();
         }

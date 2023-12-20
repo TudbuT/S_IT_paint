@@ -1,3 +1,5 @@
+//! These are quite complex, but I will do my best to explain them anyway.
+
 use std::f32::consts::PI;
 
 use egui::Color32;
@@ -87,12 +89,14 @@ impl App {
         self.image[[x, y]] = Color32::from_rgb((px >> 16) as u8, (px >> 8) as u8, px as u8);
         self.changes.push(x, y);
     }
+
+    /// Does not ignore pixels out of bounds, panic!s instead.
     pub fn set_px_unchecked(&mut self, x: usize, y: usize, col: Color32) {
         self.image[[x, y]] = col;
         self.changes.push(x, y);
     }
 
-    /// Draws a dot of arbitrary size (size 1 has no corners, all others do)
+    /// Draws a dot of arbitrary size. This is one px for a size of 0, a plus for size 1, and a rectangle of side length (size - 1) * 2
     pub fn draw_dot(&mut self, draw: DrawParams) {
         self.set_px(draw.offset(0, 0));
 
@@ -131,27 +135,32 @@ impl App {
             size: size2,
             ..
         } = draw2;
-        let dx = x2 as f32 - x1 as f32;
-        let dy = y2 as f32 - y1 as f32;
-        let dsize = size2 as f32 - size1 as f32;
-        let dist = (dx * dx + dy * dy).sqrt();
-        let step_x = dx / dist;
-        let step_y = dy / dist;
-        let step_size = dsize / dist;
+        let dx = x2 as f32 - x1 as f32; // the offset in x direction
+        let dy = y2 as f32 - y1 as f32; // the offset in y direction
+        let dsize = size2 as f32 - size1 as f32; // the change in size over the distance
+        let dist = (dx * dx + dy * dy).sqrt(); // the distance
+        let step_x = dx / dist; // the change of x over a distance of 1 pixel
+        let step_y = dy / dist; // the change of y over a distance of 1 pixel
+        let step_size = dsize / dist; // the change in size over a distance of 1 pixel
+                                      // the values as floats
         let mut fx = x1 as f32;
         let mut fy = y1 as f32;
         let mut fsize = size1 as f32;
+        // loop until distance is reached, but overshoot
         for _ in 0..(dist + 1.0) as usize {
+            // draw
             func(
                 self,
                 draw1.at_sized(fx as usize, fy as usize, fsize.round() as usize),
             );
-            if fx as usize == x2 && fy as usize == y2 {
-                break;
-            }
+            // modify values by the needed amount
             fx += step_x;
             fy += step_y;
             fsize += step_size;
+            // if arrived at destination, stop (this is why the overshoot is not a problem)
+            if fx as usize == x2 && fy as usize == y2 {
+                break;
+            }
         }
     }
 
@@ -161,7 +170,8 @@ impl App {
         self.last_mouse_pos = Some(draw);
     }
 
-    /// draws a polygon (or circle) by drawing around a center point at angles in increments of π*2 / n
+    /// Draws an n-gon (polygon) with an arbitrary rotation, radius, and amount of corners (n)
+    /// by drawing around a center point at angles in increments of π*2 / n
     pub fn draw_ngon(
         &mut self,
         draw: DrawParams,
@@ -170,26 +180,40 @@ impl App {
         mut radius_y: f32,
         begin_angle: f32,
     ) {
+        // n = 0 => draw a circle
         if n == 0 {
-            n = (radius_x.abs().max(radius_y.abs()) * PI) as usize;
+            n = (radius_x.abs().max(radius_y.abs()) * PI * 2.0) as usize; // circle can be approximated by having as many corners as pixels
         }
-        let begin_angle = (begin_angle - 90.0) / 180.0 * PI;
-        if n == 4 {
-            radius_x /= begin_angle.cos();
-            radius_y /= begin_angle.sin();
-        }
+
+        // convert rotation to radians
+        let begin_angle = begin_angle / 180.0 * PI /*start at top:*/ + PI;
+
+        // to make pulling the usual shapes feel more natural
         if n == 3 {
-            radius_x /= (begin_angle + 2.0 / 3.0 * PI).cos();
+            radius_x /= (begin_angle + 2.0 / 3.0 * PI).sin();
         }
+        if n == 4 {
+            radius_x /= begin_angle.sin();
+            radius_y /= begin_angle.cos();
+        }
+
+        // amount of radians between each corner if it were on a circle
         let angle_increment = PI * 2.0 / n as f32;
+
+        // start one corner after the starting point because we draw lines
         let mut current_angle = angle_increment + begin_angle;
+
+        // center
         let fx = draw.loc.x as f32;
         let fy = draw.loc.y as f32;
-        let mut last_x = begin_angle.cos() * radius_x;
-        let mut last_y = begin_angle.sin() * radius_y;
+
+        let mut last_x = begin_angle.sin() * radius_x;
+        let mut last_y = begin_angle.cos() * radius_y;
+        // loop over corners and draw a line from the last to the current
         for _ in 0..n {
-            let new_x = current_angle.cos() * radius_x;
-            let new_y = current_angle.sin() * radius_y;
+            let new_x = current_angle.sin() * radius_x;
+            let new_y = current_angle.cos() * radius_y;
+
             self.draw_line(
                 draw.at((fx + last_x) as usize, (fy + last_y) as usize),
                 draw.at((fx + new_x) as usize, (fy + new_y) as usize),
