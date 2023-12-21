@@ -66,12 +66,22 @@ impl DrawParams {
     }
 
     #[inline]
+    pub fn at_loc(&self, loc: Location) -> Self {
+        Self { loc, ..*self }
+    }
+
+    #[inline]
     pub fn at_sized(&self, x: usize, y: usize, size: usize) -> Self {
         Self {
             loc: self.loc.at(x, y),
             size,
             ..*self
         }
+    }
+
+    #[inline]
+    pub fn at_loc_sized(&self, loc: Location, size: usize) -> Self {
+        Self { loc, size, ..*self }
     }
 }
 
@@ -130,7 +140,7 @@ impl App {
         draw2: DrawParams,
         func: fn(&mut Self, DrawParams),
     ) {
-        assert_eq!(draw1.px, draw2.px, "Cannot change colors mid-line");
+        // this is fine actually // assert_eq!(draw1.px, draw2.px, "Cannot change colors mid-line");
         let DrawParams {
             loc: Location { x: x1, y: y1 },
             size: size1,

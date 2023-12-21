@@ -2,22 +2,22 @@ use std::{process, sync::Arc, time::Duration};
 
 use color::{ColorConvert, DrawColor};
 use compress::ChangeRect;
-use draw::DrawParams;
+use draw::{DrawParams, Location};
 use eframe::CreationContext;
 use egui::load::SizedTexture;
 use egui::*;
 
-use debug::Effects;
 use dialog::DialogAction;
+use effects::Effects;
 use egui_file::FileDialog;
 use micro_ndarray::Array;
 use mode::Mode;
 
 mod color;
 mod compress;
-mod debug;
 mod dialog;
 mod draw;
+mod effects;
 mod fill;
 mod help;
 mod io;
@@ -28,7 +28,7 @@ mod tex;
 fn main() {
     let native_options = eframe::NativeOptions::default();
     eframe::run_native(
-        "Zeichenprogramm",
+        "Paint",
         native_options,
         Box::new(|cc| Box::new(App::new(cc))),
     )
@@ -38,18 +38,24 @@ fn main() {
 pub struct App {
     pub image: Array<Color32, 2>,
     pub real_image: Array<Color32, 2>,
+    pub changes: ChangeRect,
     pub tex: TextureId,
+
     pub filename: Option<String>,
     pub dialog_action: Option<DialogAction>,
     pub dialog: Option<FileDialog>,
-    pub last_mouse_pos: Option<DrawParams>,
-    pub mode: Mode,
+
     pub color: DrawColor,
     pub draw: DrawParams,
-    pub changes: ChangeRect,
-    pub cur_edit: Option<String>,
+    pub last_mouse_pos: Option<DrawParams>,
+
+    pub mode: Mode,
     pub effects: Effects,
+
     pub pull_start: Option<[usize; 2]>,
+    pub eraser: bool,
+
+    pub(crate) cur_edit: Option<String>,
 }
 
 impl App {
@@ -79,6 +85,7 @@ impl App {
             cur_edit: None,
             effects: Effects::default(),
             pull_start: None,
+            eraser: false,
         }
     }
 }
@@ -145,6 +152,8 @@ impl eframe::App for App {
                         ui.checkbox(&mut self.effects.checkerboard, "Checkerboard");
                     });
                     ui.menu_button("Help", |ui| self.render_help(ui));
+                    ui.add_space(50.0);
+                    ui.checkbox(&mut self.eraser, "Eraser");
                 })
             })
         });
@@ -172,20 +181,36 @@ impl eframe::App for App {
                 let Some(pointer_pos) = r.hover_pos().map(|pos| pos - r.rect.min) else {
                     return;
                 };
+                let pos = Location::new(pointer_pos.x as usize, pointer_pos.y as usize);
                 // return if not actually on the image
                 if !r.hovered() {
                     return; // we don't need to handle it if it's not in focus
                 }
 
+                // handle eraser
+                if inp.pointer.primary_down() && self.eraser {
+                    self.draw_mouse(
+                        DrawParams {
+                            loc: pos,
+                            size: 20,
+                            px: 0xffffff,
+                        },
+                        App::draw_dot,
+                    );
+                    return;
+                }
+
                 // handle pulling shapes
-                if inp.pointer.secondary_down() || self.pull_start.is_some() {
-                    self.pull(inp, [pointer_pos.x as usize, pointer_pos.y as usize]);
+                if self.pull_start.is_some() {
+                    if inp.pointer.secondary_down() {
+                        self.pull(inp, [pos.x, pos.y]);
+                    }
                     return;
                 }
 
                 if inp.key_down(Key::D) {
                     self.draw_ngon(
-                        self.draw.at(pointer_pos.x as usize, pointer_pos.y as usize),
+                        self.draw.at_loc(pos),
                         3,
                         self.draw.size.max(1) as f32 * 30.0,
                         self.draw.size.max(1) as f32 * 30.0,
@@ -194,7 +219,7 @@ impl eframe::App for App {
                 }
                 if inp.key_down(Key::Q) {
                     self.draw_ngon(
-                        self.draw.at(pointer_pos.x as usize, pointer_pos.y as usize),
+                        self.draw.at_loc(pos),
                         4,
                         self.draw.size.max(1) as f32 * 30.0,
                         self.draw.size.max(1) as f32 * 30.0,
@@ -203,7 +228,7 @@ impl eframe::App for App {
                 }
                 if inp.key_down(Key::K) {
                     self.draw_ngon(
-                        self.draw.at(pointer_pos.x as usize, pointer_pos.y as usize),
+                        self.draw.at_loc(pos),
                         0,
                         self.draw.size.max(1) as f32 * 30.0,
                         self.draw.size.max(1) as f32 * 30.0,
@@ -212,7 +237,7 @@ impl eframe::App for App {
                 }
                 // a normal draw operation. interpolates unless the operation overrides it
                 if inp.pointer.primary_down() {
-                    let draw = self.draw.at(pointer_pos.x as usize, pointer_pos.y as usize);
+                    let draw = self.draw.at_loc(pos);
                     if self.mode.run_once() {
                         // don't interpolate
                         self.mode.into_fn()(self, draw);
