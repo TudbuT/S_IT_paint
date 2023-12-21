@@ -1749,6 +1749,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "paint"
+version = "0.1.0"
+dependencies = [
+ "eframe",
+ "egui",
+ "egui_file",
+ "image",
+ "micro_ndarray",
+]
+
+[[package]]
 name = "parking"
 version = "2.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2032,17 +2043,6 @@ dependencies = [
  "libc",
  "linux-raw-sys 0.4.10",
  "windows-sys 0.48.0",
-]
-
-[[package]]
-name = "s_it_paint"
-version = "0.1.0"
-dependencies = [
- "eframe",
- "egui",
- "egui_file",
- "image",
- "micro_ndarray",
 ]
 
 [[package]]

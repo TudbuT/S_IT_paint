@@ -7,7 +7,7 @@ use eframe::CreationContext;
 use egui::load::SizedTexture;
 use egui::*;
 
-use debug::Debug;
+use debug::Effects;
 use dialog::DialogAction;
 use egui_file::FileDialog;
 use micro_ndarray::Array;
@@ -19,6 +19,7 @@ mod debug;
 mod dialog;
 mod draw;
 mod fill;
+mod help;
 mod io;
 mod mode;
 mod pull;
@@ -47,7 +48,7 @@ pub struct App {
     pub draw: DrawParams,
     pub changes: ChangeRect,
     pub cur_edit: Option<String>,
-    pub debug: Debug,
+    pub effects: Effects,
     pub pull_start: Option<[usize; 2]>,
 }
 
@@ -76,7 +77,7 @@ impl App {
             draw: DrawParams::new(0, 0, 1, 0x000000),
             changes: ChangeRect::new(20),
             cur_edit: None,
-            debug: Debug::default(),
+            effects: Effects::default(),
             pull_start: None,
         }
     }
@@ -139,19 +140,21 @@ impl eframe::App for App {
                             self.cur_edit = None;
                         }
                     });
-                    ui.menu_button("Debugging", |ui| {
-                        ui.checkbox(&mut self.debug.randomize_size, "Randomize sizes");
+                    ui.menu_button("Effects", |ui| {
+                        ui.checkbox(&mut self.effects.randomize_size, "Randomize sizes");
+                        ui.checkbox(&mut self.effects.checkerboard, "Checkerboard");
                     });
+                    ui.menu_button("Help", |ui| self.render_help(ui));
                 })
             })
         });
 
         // updates things set in the debug menu
-        self.update_debug();
+        self.update_effects();
 
         CentralPanel::default().frame(f).show(ctx, |ui| {
             // shows the image
-            let size = ui.available_size().round();
+            let size = ui.available_size().floor();
             self.correct_tex_size(
                 &mut ctx.tex_manager().write(),
                 [size.x as usize, size.y as usize],
@@ -159,7 +162,9 @@ impl eframe::App for App {
             self.image_to_texture(&mut ctx.tex_manager().write());
 
             // draw the texture
-            let r = ui.add(Image::from_texture(SizedTexture::new(self.tex, size)));
+            let r = ui.add(
+                Image::from_texture(SizedTexture::new(self.tex, size)).fit_to_original_size(1.0),
+            );
 
             // handle keyboard and mouse input
             ui.input(|inp| {

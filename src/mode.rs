@@ -39,7 +39,7 @@ impl Mode {
             RADIUS = (radius_x, radius_y); // need this for compatible match arms
             match self {
                 Paintbrush => App::draw_dot,
-                Triangle => |this, draw| this.draw_ngon(draw, 3, RADIUS.0, -RADIUS.1, 0.0),
+                Triangle => |this, draw| this.draw_ngon(draw, 3, RADIUS.0, -RADIUS.1, 180.0),
                 Square => |this, draw| this.draw_ngon(draw, 4, RADIUS.0, -RADIUS.1, 45.0),
                 Circle => |this, draw| this.draw_ngon(draw, 0, RADIUS.0, -RADIUS.1, 0.0),
                 Fill => |this, draw| this.fill(draw),

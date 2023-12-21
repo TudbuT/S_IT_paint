@@ -86,12 +86,18 @@ impl App {
         if x >= size[0] || y >= size[1] {
             return; // just ignore
         }
+        if self.effects.checkerboard && (x + y) % 2 == 0 {
+            return;
+        }
         self.image[[x, y]] = Color32::from_rgb((px >> 16) as u8, (px >> 8) as u8, px as u8);
         self.changes.push(x, y);
     }
 
     /// Does not ignore pixels out of bounds, panic!s instead.
     pub fn set_px_unchecked(&mut self, x: usize, y: usize, col: Color32) {
+        if self.effects.checkerboard && (x + y) % 2 == 0 {
+            return;
+        }
         self.image[[x, y]] = col;
         self.changes.push(x, y);
     }
@@ -188,7 +194,7 @@ impl App {
         // convert rotation to radians
         let begin_angle = begin_angle / 180.0 * PI /*start at top:*/ + PI;
 
-        // to make pulling the usual shapes feel more natural
+        // to make the usual shapes feel more natural
         if n == 3 {
             radius_x /= (begin_angle + 2.0 / 3.0 * PI).sin();
         }
