@@ -162,6 +162,7 @@ impl eframe::App for App {
         self.update_effects();
 
         CentralPanel::default().frame(f).show(ctx, |ui| {
+            align_cursor(ui);
             // shows the image
             let size = ui.available_size().floor();
             self.correct_tex_size(
@@ -188,23 +189,23 @@ impl eframe::App for App {
                 }
 
                 // handle eraser
-                if inp.pointer.primary_down() && self.eraser {
-                    self.draw_mouse(
-                        DrawParams {
-                            loc: pos,
-                            size: 20,
-                            px: 0xffffff,
-                        },
-                        App::draw_dot,
-                    );
+                if self.eraser {
+                    if inp.pointer.primary_down() {
+                        self.draw_mouse(
+                            DrawParams {
+                                loc: pos,
+                                size: 20,
+                                px: 0xffffff,
+                            },
+                            App::draw_dot,
+                        );
+                    }
                     return;
                 }
 
                 // handle pulling shapes
-                if self.pull_start.is_some() {
-                    if inp.pointer.secondary_down() {
-                        self.pull(inp, [pos.x, pos.y]);
-                    }
+                if self.pull_start.is_some() || inp.pointer.secondary_down() {
+                    self.pull(inp, [pos.x, pos.y]);
                     return;
                 }
 
@@ -251,4 +252,11 @@ impl eframe::App for App {
             });
         });
     }
+}
+
+// cursor may be between pixels, ew!
+fn align_cursor(ui: &mut Ui) {
+    let cursor = ui.cursor();
+    let diff = cursor.min.ceil() - cursor.min;
+    ui.allocate_space(vec2(diff.x, diff.y));
 }
