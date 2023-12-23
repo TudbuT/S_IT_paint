@@ -56,6 +56,7 @@ pub struct App {
     pub eraser: bool,
 
     pub(crate) cur_edit: Option<String>,
+    pub(crate) pixels_per_point: f32,
 }
 
 impl App {
@@ -86,7 +87,15 @@ impl App {
             effects: Effects::default(),
             pull_start: None,
             eraser: false,
+            pixels_per_point: 1.0,
         }
+    }
+
+    pub fn to_px(&self, point: f32) -> usize {
+        (point * self.pixels_per_point) as usize
+    }
+    pub fn to_point(&self, px: usize) -> f32 {
+        px as f32 / self.pixels_per_point
     }
 }
 
@@ -94,6 +103,7 @@ impl eframe::App for App {
     fn update(&mut self, ctx: &Context, _frame: &mut eframe::Frame) {
         // try to do 90fps
         ctx.request_repaint_after(Duration::from_millis(1000 / 90));
+        self.pixels_per_point = ctx.pixels_per_point();
 
         self.handle_dialogs(ctx);
 
@@ -167,7 +177,7 @@ impl eframe::App for App {
             let size = ui.available_size().floor();
             self.correct_tex_size(
                 &mut ctx.tex_manager().write(),
-                [size.x as usize, size.y as usize],
+                [self.to_px(size.x), self.to_px(size.y)],
             );
             self.image_to_texture(&mut ctx.tex_manager().write());
 
@@ -182,7 +192,7 @@ impl eframe::App for App {
                 let Some(pointer_pos) = r.hover_pos().map(|pos| pos - r.rect.min) else {
                     return;
                 };
-                let pos = Location::new(pointer_pos.x as usize, pointer_pos.y as usize);
+                let pos = Location::new(self.to_px(pointer_pos.x), self.to_px(pointer_pos.y));
                 // return if not actually on the image
                 if !r.hovered() {
                     return; // we don't need to handle it if it's not in focus
